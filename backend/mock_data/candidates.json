@@ -1,0 +1,38 @@
+[
+  {
+    "id": "c1", "job_id": "j1", "name": "Nguyen Van An", "email": "an.nguyen@example.com",
+    "current_title": "Backend Developer", "years_experience": 5,
+    "skills": ["python", "fastapi", "postgresql", "sql", "docker"],
+    "resume_text": "5 years building Python APIs with FastAPI and PostgreSQL. Containerized services with Docker."
+  },
+  {
+    "id": "c2", "job_id": "j1", "name": "Tran Thi Binh", "email": "binh.tran@example.com",
+    "current_title": "Software Engineer", "years_experience": 4,
+    "skills": ["python", "fastapi", "sql"],
+    "resume_text": "4 years of backend work in Python. Designed REST APIs with FastAPI and wrote SQL reports."
+  },
+  {
+    "id": "c3", "job_id": "j1", "name": "Le Van Cuong", "email": "cuong.le@example.com",
+    "current_title": "Junior Developer", "years_experience": 1,
+    "skills": ["python", "sql"],
+    "resume_text": "1 year as junior developer. Small Python scripts and basic SQL queries."
+  },
+  {
+    "id": "c4", "job_id": "j1", "name": "Pham Thi Dung", "email": "dung.pham@example.com",
+    "current_title": "Java Developer", "years_experience": 6,
+    "skills": ["java", "spring", "sql"],
+    "resume_text": "6 years of Java and Spring Boot backend development. No Python experience."
+  },
+  {
+    "id": "c5", "job_id": "j1", "name": "Hoang Van Em", "email": "em.hoang@example.com",
+    "current_title": "Python Developer", "years_experience": 3,
+    "skills": ["python", "django", "mysql"],
+    "resume_text": "3 years with Python and Django, MySQL databases. Has not used FastAPI but built many REST APIs."
+  },
+  {
+    "id": "c6", "job_id": "j1", "name": "Vo Thi Phuong", "email": "phuong.vo@example.com",
+    "current_title": "Engineering Manager", "years_experience": 8,
+    "skills": ["python", "fastapi", "sql", "leadership"],
+    "resume_text": "8 years total. Strong Python/FastAPI early on, but the last 3 years were people management with little hands-on coding."
+  }
+]

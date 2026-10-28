@@ -1,0 +1,11 @@
+pydantic>=2.7
+pytest>=8
+langchain-core
+langchain
+langchain-openai
+langgraph
+python-dotenv
+langchain
+langchain-openai
+langgraph
+python-dotenv

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "j1",
+    "title": "Backend Engineer (Python)",
+    "department": "Engineering",
+    "description": "Build and maintain REST APIs for our hiring platform.",
+    "required_skills": ["python", "fastapi", "sql"],
+    "nice_to_have_skills": ["docker", "aws"],
+    "min_years_experience": 3,
+    "location": "Ho Chi Minh City"
+  }
+]
