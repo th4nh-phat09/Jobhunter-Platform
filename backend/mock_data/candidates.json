@@ -1,12 +1,12 @@
 [
   {
-    "id": "c1", "job_id": "j1", "name": "Nguyen Van An", "email": "an.nguyen@example.com",
+    "id": "c1", "job_id": "j1", "name": "Nguyen Van An", "email": "22110197@student.hcmute.edu.vn",
     "current_title": "Backend Developer", "years_experience": 5,
     "skills": ["python", "fastapi", "postgresql", "sql", "docker"],
     "resume_text": "5 years building Python APIs with FastAPI and PostgreSQL. Containerized services with Docker."
   },
   {
-    "id": "c2", "job_id": "j1", "name": "Tran Thi Binh", "email": "binh.tran@example.com",
+    "id": "c2", "job_id": "j1", "name": "Tran Thi Binh", "email": "thanphat354@gmail.com.com",
     "current_title": "Software Engineer", "years_experience": 4,
     "skills": ["python", "fastapi", "sql"],
     "resume_text": "4 years of backend work in Python. Designed REST APIs with FastAPI and wrote SQL reports."

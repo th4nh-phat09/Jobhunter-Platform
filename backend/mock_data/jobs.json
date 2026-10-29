@@ -7,6 +7,8 @@
     "required_skills": ["python", "fastapi", "sql"],
     "nice_to_have_skills": ["docker", "aws"],
     "min_years_experience": 3,
-    "location": "Ho Chi Minh City"
+    "location": "Ho Chi Minh City",
+    "interview_duration_minutes": 45,
+    "mentor_ids": ["m1"]
   }
 ]

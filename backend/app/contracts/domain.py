@@ -1,13 +1,15 @@
-"""Domain models for the Filter step: a job and the candidates who applied.
+"""Domain models shared by the hiring agents.
 
-Provider adapters convert their own data into these models, so the rest
-of the system never sees provider-specific shapes.
-Scheduling/interview models are added later, when those agents are built.
+Provider adapters convert external data into these models.
+Agents use these stable contracts instead of provider-specific responses.
 """
+
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-# ASSUMPTION: fields below are a draft until the product spec defines the real schema.
+
+# ASSUMPTION: fields remain draft until the product spec defines final schemas.
 
 
 class Job(BaseModel):
@@ -19,6 +21,8 @@ class Job(BaseModel):
     nice_to_have_skills: list[str] = []
     min_years_experience: int = Field(ge=0)
     location: str
+    interview_duration_minutes: int = Field(gt=0)
+    mentor_ids: list[str] = []
 
 
 class Candidate(BaseModel):
@@ -30,3 +34,22 @@ class Candidate(BaseModel):
     years_experience: int = Field(ge=0)
     skills: list[str]
     resume_text: str
+
+
+class Mentor(BaseModel):
+    id: str
+    name: str
+    email: str
+
+
+class Slot(BaseModel):
+    """A free, timezone-aware interview window on a mentor's calendar."""
+
+    id: str
+    mentor_id: str
+    start: datetime
+    end: datetime
+
+    @property
+    def duration_minutes(self) -> int:
+        return int((self.end - self.start).total_seconds() / 60)
