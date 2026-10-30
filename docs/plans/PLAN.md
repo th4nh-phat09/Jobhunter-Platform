@@ -15,7 +15,7 @@ Team xây **AI Hiring Operator**: không phải ATS mới, không phải chatbot
 
 ## 2. Phạm vi
 
-**Trong phạm vi:** UI hiện workflow + trạng thái run; workflow Filter → Interview → Schedule; Supervisor + agent có tool; contract input/output; ranh giới provider (mock trước, OSS sau); run/step state, lỗi, log hiển thị trên UI; lưu state bền vững; nhận sự kiện từ provider; export workflow definition.
+**Trong phạm vi:** UI hiện workflow + trạng thái run; workflow Filter → Schedule → Interview; Supervisor + agent có tool; contract input/output; ranh giới provider (mock trước, adapter thật sau); run/step state, lỗi, log hiển thị trên UI; lưu state bền vững; nhận sự kiện từ provider; export workflow definition.
 
 **Ngoài phạm vi (không làm nếu spec không yêu cầu):** workflow builder kéo-thả, agent/graph tuỳ ý do user tạo, multi-tenant enterprise, ATS đầy đủ, tích hợp provider thương mại thật, memory/fine-tune nâng cao, Kubernetes/microservice mỗi agent, observability đầy đủ, quyết định tuyển dụng tự động không qua duyệt.
 
@@ -53,7 +53,7 @@ Vòng ReAct của agent: **nghĩ → gọi tool → xem kết quả → nghĩ ti
 
 - Một app Python, các agent là module, không tách microservice.
 - **UI không chứa logic workflow, không là nguồn sự thật.** Backend sở hữu state; UI chỉ hiển thị.
-- Happy path: load data → Filter → Schedule → Interview → kết thúc. Lệch (lỗi, 0 ứng viên, hồ sơ mập mờ, provider sập) thì Supervisor quyết trong luật.
+- Happy path hiện tại: load data → Filter → Schedule proposal. Sau khi nối provider thật: proposal → calendar/email/Slack execution → Interview → kết thúc. Lệch (lỗi, 0 ứng viên, hồ sơ mập mờ, provider sập) thì Supervisor quyết trong luật.
 - Whiteboard vẽ mũi tên hai chiều giữa các agent (vd Interview xong có thể quay lại Schedule để dời lịch). Chưa chốt ở đây, xử lý khi tới bước nối agent.
 - **Phần từ mục 5 trở xuống (Supervisor, guardrail, API, state) là hướng dự kiến, chưa chốt chi tiết.** Chốt khi tới bước đó, sau khi các agent trước đã chạy được.
 
@@ -65,7 +65,7 @@ Vòng ReAct của agent: **nghĩ → gọi tool → xem kết quả → nghĩ ti
 | **Push** | Provider → Platform | Có đơn ứng tuyển mới, ứng viên trả lời, lịch bị huỷ/đổi | Webhook `POST /events`; nếu provider không có webhook thì adapter polling định kỳ |
 
 Interface nội bộ `HiringProvider` (chỉ làm method MVP cần, đổi tên theo provider thật):
-`get_job`, `list_candidates`, `get_candidate`, `list_interviewers`, `get_availability`, `create_interview`, `get_interview`, `notify_candidate`.
+Đã có read methods `get_job`, `list_candidates`, `get_candidate`, `list_interviewers`, `get_availability`. Write methods `create_interview`, `get_interview`, `notify_candidate`, `notify_recruiter` thêm ở phase execute.
 
 Luật tích hợp:
 - Mapping riêng provider nằm trong adapter; ra ngoài adapter chỉ thấy schema nội bộ (`contracts/domain.py`).
@@ -101,10 +101,22 @@ Scope lấy từ whiteboard brainstorm của team. Tool là nháp, chốt khi t�
 | Agent | Scope (whiteboard) | Tool nháp | Loại |
 |---|---|---|---|
 | Filter | Lọc shortlist cho các role. Nguồn = danh sách ứng viên **đã nộp sẵn trong ATS** (provider), không tự tìm CV. "Alert HR" đã gạch, không làm | `get_job`, `list_candidates`, `get_candidate_profile` | đọc |
-| Schedule | Gửi mail, xem lịch (calendar), theo dõi ứng viên (track candidates) | `get_availability`, `create_interview`, `notify_candidate`, ... | **ghi** (cần duyệt) |
-| Interview | Câu hỏi do AI sinh, voice interview, transcript, so sánh ứng viên | **Chưa chốt.** Voice + transcript là scope lớn, cần quyết có làm trong MVP không | ? |
+| Schedule | Lấy thời lượng phỏng vấn; đọc lịch rảnh của techlead; xếp mỗi ứng viên một slot; tạo calendar event; gửi email mời; báo Slack | Đã làm: `get_job`, `get_candidate_profile`, `list_interviewers`, `get_availability`; sắp làm: `create_interview`, `notify_candidate`, `notify_recruiter` | đọc; ghi ở phase execute |
+| Interview | AI companion hỗ trợ người phỏng vấn: live transcript, gợi ý follow-up, chấm theo barem sau buổi | Không dùng tool provider; STT = AssemblyAI streaming (`speaker_labels`), não = `make_llm()`; guardrail: evidence_quote phải là lời candidate | đọc |
 
-Chưa định nghĩa chi tiết tool, contract hay dữ liệu của Schedule và Interview. Làm tới lượt mới chốt.
+### Schedule MVP đã chốt
+
+- Làm standalone với mock read adapter trước; sau đó thay bằng HR system, Google Calendar, email và Slack thật qua cùng interface.
+- Input hiện tại là shortlist fixture từ Filter; mỗi candidate nhận một slot riêng.
+- `Job.interview_duration_minutes` do provider trả về; agent không tự đoán thời lượng.
+- Candidate dùng email thật khi chạy demo được cấp phép; không commit credential hoặc thông tin cá nhân không được phép chia sẻ.
+- Đã hoàn thành phase proposal: đọc availability → LLM đề xuất slot → code guardrail kiểm tra.
+- Phase execute tiếp theo: tạo calendar event → gửi email → báo Slack, chỉ chạy sau khi proposal hợp lệ và policy demo được xác nhận.
+- Để phase sau nữa: đọc phản hồi, confirm/decline, dời lịch, cập nhật event và notification theo phản hồi.
+- Tool ghi không để LLM tự gọi trực tiếp; Schedule tạo proposal có cấu trúc, code kiểm tra rồi executor có kiểm soát mới gọi adapter ghi.
+- Mock/provider lỗi, thiếu slot hoặc slot ngắn → kết quả tường minh, không báo success giả.
+
+Contract, mock data, read tools và proposal guardrail của Schedule đã hoàn thành; bước tiếp theo là map provider HR thật rồi mới thêm các hành động ghi.
 
 Quy tắc nghiệp vụ cụ thể (tiêu chí lọc, loại phỏng vấn...) theo product spec; chưa có thì đánh dấu `# ASSUMPTION`.
 
@@ -124,7 +136,7 @@ Quy tắc nghiệp vụ cụ thể (tiêu chí lọc, loại phỏng vấn...) t
 **Guardrail (code cứng, LLM không vượt được):**
 1. Bảng chuyển bước hợp lệ (vd Schedule chỉ chạy khi đã có ứng viên qua Filter; Interview chỉ chạy khi lịch đã được provider xác nhận). Chọn sai → từ chối, bắt chọn lại.
 2. Giới hạn: ~15 lượt supervisor/run, 2 retry/agent, N vòng ReAct/agent. Hết → `needs_human`.
-3. Tool ghi (`create_interview`, `notify_candidate`) chờ người duyệt trên UI (`interrupt`).
+3. Tool ghi (`create_interview`, `notify_candidate`) chờ người duyệt trên UI (`interrupt`) hoặc policy demo được xác nhận rõ trước khi tự động chạy.
 4. Chỉ báo thành công khi provider xác nhận.
 5. Agent chỉ dùng tool trong allowlist.
 
@@ -198,10 +210,11 @@ Owner tự gõ code theo hướng dẫn từng bước; sau mỗi bước cập 
 
 | # | Việc | Cần LLM | Trạng thái |
 |---|---|---|---|
-| 1 | **Filter standalone** (chỉ scope Filter): venv, `domain.py` chỉ có Job + Candidate, mock job/ứng viên (commit, có chú thích), tool đọc, Filter Agent, test | Có từ đoạn agent | **đang làm** (venv xong) |
-| 2 | **Schedule standalone**: input = shortlist giả bằng fixture; mock calendar + mail + track; tool ghi + bước duyệt (`interrupt`); thêm dữ liệu Schedule vào domain lúc này | Có | |
+| 1 | **Filter standalone**: mock job/ứng viên, tool đọc, Filter Agent, test | Có | **xong** (25 test pass; live clear cases chạy) |
+| 2 | **Schedule proposal standalone**: contract + shortlist fixture; mock calendar read; tool đọc; LLM đề xuất slot; guardrail; test | Có | **xong** (46 test pass; model thật chạy) |
+| 2b | **Schedule execution + provider integration**: map HR system; tạo calendar event; gửi email; báo Slack; test happy path/lỗi | Có | **tiếp theo** |
 | 3 | **Nối Filter → Schedule** (hàm tuần tự tạm, chưa Supervisor) | Có | |
-| 4 | **Interview standalone**: chốt scope trước (có voice/transcript không?) | Có | |
+| 4 | **Interview standalone**: audio giả lập (LLM kịch bản + OpenAI TTS, `scripts/generate_mock_interview.py`), live transcript AssemblyAI trên UI demo `app/api/interview_api.py`, follow-up + chấm barem `rubric_j1.json` | Có | **xong** (live 99% chữ đúng, 100% đúng người nói; strong 21/25, weak 13/25) |
 | 5 | **Nối Schedule → Interview**, rồi xử lý mũi tên hai chiều (dời lịch) | Có | |
 | 6 | Supervisor + guardrail, test kịch bản fail | Có | |
 | 7 | Lưu bền vững SQLite + resume sau restart | Không | |
@@ -238,6 +251,7 @@ Owner tự gõ code theo hướng dẫn từng bước; sau mỗi bước cập 
 ## 17. Còn mở (cần chốt, không đoán)
 
 - LLM provider + ai giữ API key (cần từ bước 2).
+- HR system/Google Calendar/Gmail/Slack thật: API, auth, webhook, seed/reset dữ liệu và field duration (chờ teammate cung cấp).
 - Provider OSS nào, có webhook không (quyết định push hay polling).
 - Run theo **job** (cả lô ứng viên) hay theo **ứng viên**? Run dài ngày thì theo ứng viên tự nhiên hơn, nhưng plan gốc theo job. Chờ product spec.
 - Schema job/ứng viên/phỏng vấn, rule lọc, loại phỏng vấn: chờ product spec.

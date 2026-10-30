@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "Backend Engineer (Python) — Technical interview" [level=1] [ref=e3]
+    - generic [ref=e4]: Ready
+    - combobox "Interview recording" [ref=e5]:
+      - option "Strong candidate" [selected]
+      - option "Weak candidate"
+    - button "Start interview" [ref=e6] [cursor=pointer]
+    - button "End interview" [disabled] [ref=e7]
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - heading "Transcript" [level=2] [ref=e10]
+      - paragraph [ref=e12]: Press Start to play the recording.
+    - complementary [ref=e13]:
+      - heading "Recording" [level=2] [ref=e15]
+      - generic [ref=e17]:
+        - heading "Suggested follow-up questions" [level=2] [ref=e18]
+        - list [ref=e19]:
+          - listitem [ref=e20]: Appears after the candidate answers.
+      - generic [ref=e21]:
+        - heading "Feedback (rubric)" [level=2] [ref=e22]
+        - paragraph [ref=e24]: Appears after End interview.

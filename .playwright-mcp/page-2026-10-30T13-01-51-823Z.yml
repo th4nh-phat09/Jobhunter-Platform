@@ -1,0 +1,86 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "Backend Engineer (Python) — Technical interview" [level=1] [ref=e3]
+    - generic [ref=e4]: Done
+    - combobox "Interview recording" [disabled] [ref=e5]:
+      - option "Strong candidate" [selected]
+      - option "Weak candidate"
+    - button "Start interview" [disabled] [ref=e6]
+    - button "End interview" [disabled] [ref=e7]
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - heading "Transcript" [level=2] [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: Techlead
+          - paragraph [ref=e30]: Hi, thanks for coming in today. How are you doing?
+        - generic [ref=e31]:
+          - generic [ref=e32]: Candidate
+          - paragraph [ref=e33]: Hi! I'm doing well, thank you. Excited to be here and talk about the backend engineer role.
+        - generic [ref=e34]:
+          - generic [ref=e35]: Techlead
+          - paragraph [ref=e36]: Great to hear! So, before we dive into the technical stuff, can you tell me a little about yourself and your background?
+        - generic [ref=e37]:
+          - generic [ref=e38]: Candidate
+          - paragraph [ref=e39]: Sure! I recently graduated with a degree in computer science. During my studies, I did an internship where I worked on a small web app backend using Python and FastAPI.
+        - generic [ref=e40]:
+          - generic [ref=e41]: Techlead
+          - paragraph [ref=e42]: That's a solid start. What made you interested in backend development specifically?
+        - generic [ref=e43]:
+          - generic [ref=e44]: Candidate
+          - paragraph [ref=e45]: I enjoy working with data and logic behind the scenes. I like how backend connects the frontend with databases and handles the core functionality.
+        - generic [ref=e46]:
+          - generic [ref=e47]: Techlead
+          - paragraph [ref=e48]: Makes sense. Let's talk Python a bit. Can you explain what a Python dictionary is and give a simple example?
+        - generic [ref=e49]:
+          - generic [ref=e50]: Candidate
+          - paragraph [ref=e51]: "A dictionary is a collection of key-value pairs. For example, I used a dictionary to store user info like {'name': 'Alice', 'age': 25} in my internship project."
+        - generic [ref=e52]:
+          - generic [ref=e53]: Techlead
+          - paragraph [ref=e54]: Good. How do you access a value in a dictionary?
+        - generic [ref=e55]:
+          - generic [ref=e56]: Candidate
+          - paragraph [ref=e57]: You use the key inside square brackets, like dict['name'] to get 'Alice'.
+    - complementary [ref=e13]:
+      - heading "Recording" [level=2] [ref=e15]
+      - generic [ref=e17]:
+        - heading "Suggested follow-up questions" [level=2] [ref=e18]
+        - list [ref=e19]:
+          - listitem [ref=e58]: Can you explain how you handled error cases when accessing dictionary keys in your project?
+          - listitem [ref=e59]: Have you worked with virtual environments in Python? How do you set one up?
+          - listitem [ref=e60]: Could you describe a REST API endpoint you built using FastAPI and how you structured it?
+      - generic [ref=e21]:
+        - heading "Feedback (rubric)" [level=2] [ref=e22]
+        - generic [ref=e23]:
+          - paragraph [ref=e61]: The candidate demonstrates a basic understanding of Python fundamentals, particularly dictionaries, and has some practical experience with FastAPI. However, they did not elaborate on REST API concepts, SQL/database knowledge, problem solving, or collaboration skills, which are important for the backend engineer role.
+          - generic [ref=e62]:
+            - text: Python fundamentals
+            - generic [ref=e63]: "3"
+            - generic [ref=e64]: A dictionary is a collection of key-value pairs.
+            - generic [ref=e65]: Candidate correctly explained what a Python dictionary is and gave an example, showing understanding of data types and basic usage.
+          - generic [ref=e66]:
+            - text: REST API and HTTP
+            - generic [ref=e67]: "1"
+            - generic [ref=e68]: I worked on a small web app backend using Python and FastAPI.
+            - generic [ref=e69]: Candidate mentioned experience with FastAPI but did not elaborate on HTTP methods, status codes, or REST design.
+          - generic [ref=e70]:
+            - text: SQL and databases
+            - generic [ref=e71]: "0"
+            - generic [ref=e72]: Candidate did not mention SQL, joins, indexes, or query design.
+          - generic [ref=e73]:
+            - text: Problem solving
+            - generic [ref=e74]: "0"
+            - generic [ref=e75]: Candidate did not provide concrete examples or step-by-step reasoning about problem solving.
+          - generic [ref=e76]:
+            - text: Collaboration and Git
+            - generic [ref=e77]: "0"
+            - generic [ref=e78]: Candidate did not mention Git, branches, pull requests, or teamwork.
+          - heading "Strengths" [level=2] [ref=e79]
+          - list [ref=e80]:
+            - listitem [ref=e81]: Understands Python dictionaries and can provide examples.
+            - listitem [ref=e82]: Has practical experience with FastAPI in a backend internship.
+          - heading "Concerns" [level=2] [ref=e83]
+          - list [ref=e84]:
+            - listitem [ref=e85]: Limited discussion on REST API concepts beyond mentioning FastAPI.
+            - listitem [ref=e86]: No mention of SQL or database knowledge.
+            - listitem [ref=e87]: No examples of problem solving or collaboration skills.

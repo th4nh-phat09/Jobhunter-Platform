@@ -1,0 +1,65 @@
+- generic [ref=f7e58]:
+  - generic [ref=f7e60]:
+    - heading "Join our team" [level=3] [ref=f7e61]
+    - paragraph [ref=f7e62]: Find a role where you can do your best work.
+  - generic [ref=f7e63]:
+    - link [ref=f7e64] [cursor=pointer]:
+      - /url: /careers
+    - generic [ref=f7e68]:
+      - generic [ref=f7e69]:
+        - heading "Software engineer" [level=4] [ref=f7e70]
+        - generic [ref=f7e71]:
+          - generic [ref=f7e72]: IT
+          - generic [ref=f7e74]: Ho Chi Minh City / Hybrid
+          - generic [ref=f7e78]: Full-time
+        - generic [ref=f7e80]:
+          - paragraph [ref=f7e81]: "Salary: 5.000.000 – 10.000.000 VND / month"
+          - paragraph [ref=f7e82]: "Degree: none"
+          - paragraph [ref=f7e83]: "Apply by: 11/7/2026"
+        - heading "About the role" [level=6] [ref=f7e84]
+        - paragraph [ref=f7e85]: test
+        - heading "Requirements" [level=6] [ref=f7e86]
+        - paragraph [ref=f7e87]: test
+      - generic [ref=f7e89]:
+        - heading "Apply for this job" [level=6] [ref=f7e90]
+        - generic [ref=f7e91]:
+          - generic [ref=f7e92]:
+            - generic:
+              - text: Full name
+              - generic [aria-hidden]: "*"
+            - generic [ref=f7e93]:
+              - textbox "Full name" [ref=f7e94]
+              - group [aria-hidden]:
+                - generic: Full name *
+          - generic [ref=f7e95]:
+            - generic:
+              - text: Email
+              - generic [aria-hidden]: "*"
+            - generic [ref=f7e96]:
+              - textbox "Email" [ref=f7e97]
+              - group [aria-hidden]:
+                - generic: Email *
+          - generic [ref=f7e98]:
+            - generic: Phone
+            - generic [ref=f7e99]:
+              - textbox "Phone" [ref=f7e100]
+              - group [aria-hidden]:
+                - generic: Phone
+          - generic [ref=f7e101]:
+            - generic: LinkedIn profile
+            - generic [ref=f7e102]:
+              - textbox "LinkedIn profile" [ref=f7e103]:
+                - /placeholder: https://www.linkedin.com/in/…
+              - group [aria-hidden]:
+                - generic: LinkedIn profile
+          - generic [ref=f7e104]:
+            - generic: Short introduction
+            - generic [ref=f7e105]:
+              - textbox "Short introduction" [ref=f7e106]
+              - group [aria-hidden]:
+                - generic: Short introduction
+          - button [ref=f7e107] [cursor=pointer]:
+            - text: Upload CV
+            - button "Upload CV" [ref=f7e111]
+          - generic [ref=f7e112]: PDF, DOCX or TXT, up to 5 MB
+          - button "Submit application" [ref=f7e113] [cursor=pointer]

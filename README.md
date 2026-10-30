@@ -9,10 +9,11 @@ Luồng dự kiến theo brainstorm của team: **Filter → Schedule → Interv
 | Phần | Trạng thái |
 |---|---|
 | Filter Agent (lọc ứng viên, chạy với mock provider) | Xong |
-| Schedule Agent | Chưa làm |
-| Interview Agent | Chưa làm |
+| Schedule Agent: đọc dữ liệu, đề xuất slot, guardrail | Xong standalone |
+| Schedule execution: calendar event, email, Slack | Chưa làm |
+| Interview Agent: live transcript (AssemblyAI) + follow-up + chấm barem, có UI demo | Xong standalone |
 | Supervisor, lưu state bền vững, API, UI | Chưa làm |
-| Provider thật (OSS) | Chờ team integration |
+| HR system/provider thật | Chờ team integration |
 
 Kế hoạch đầy đủ và tiến độ từng bước: [docs/plans/PLAN.md](docs/plans/PLAN.md). Quy ước làm việc: [CLAUDE.md](CLAUDE.md).
 
@@ -28,36 +29,59 @@ Kế hoạch đầy đủ và tiến độ từng bước: [docs/plans/PLAN.md](
 └── backend/
     ├── requirements.txt
     ├── .env.example              # mẫu biến môi trường (key thật để trong .env, không commit)
-    ├── mock_data/                # dữ liệu GIẢ mô phỏng ATS, có commit (xem README trong đó)
+    ├── mock_data/                # dữ liệu GIẢ mô phỏng HR system + calendar
     │   ├── README.md
-    │   ├── jobs.json
-    │   └── candidates.json
+    │   ├── jobs.json             # job, duration, mentor được phép
+    │   ├── candidates.json       # ứng viên
+    │   ├── mentors.json          # techlead/interviewer
+    │   ├── slots.json            # availability giả
+    │   └── shortlist.json        # input giả của Schedule
     ├── app/
     │   ├── contracts/            # kiểu dữ liệu dùng chung
-    │   │   ├── domain.py         #   Job, Candidate
-    │   │   └── results.py        #   kết quả của Filter
+    │   │   ├── domain.py         #   Job, Candidate, Mentor, Slot
+    │   │   ├── results.py         #   kết quả của Filter
+    │   │   ├── schedule.py        #   proposal xếp lịch
+    │   │   └── schedule_results.py #  kết quả đã validate của Schedule
     │   ├── providers/            # ranh giới với provider bên ngoài
-    │   │   ├── base.py           #   HiringProvider: provider phải có những hàm gì + các loại lỗi
-    │   │   └── mock.py           #   MockProvider: đọc mock_data, có chế độ giả lập provider sập
-    │   ├── tools/
-    │   │   └── filter_tools.py   #   tool chỉ đọc của Filter (allowlist)
+    │   │   ├── base.py            #   HiringProvider contract
+    │   │   └── mock.py            #   MockProvider đọc mock_data
+    │   ├── tools/                # tool allowlist cho từng agent
+    │   │   ├── filter_tools.py
+    │   │   └── schedule_tools.py  #   tool đọc của Schedule
     │   └── agents/
     │       ├── llm.py            #   tạo LLM OpenAI từ biến môi trường
-    │       └── filter_agent.py   #   prompt + chạy agent + kiểm tra kết quả
+    │       ├── filter_agent.py   #   Filter Agent
+    │       └── schedule_agent.py #   đề xuất slot + guardrail
     └── tests/                    # pytest
 ```
 
-## Luồng dữ liệu (phần đã có)
+## Luồng dữ liệu hiện tại
+
+### Filter
 
 ```
 Filter Agent (LLM, vòng ReAct)
-   └─ gọi tool (filter_tools.py, chỉ đọc)
-        └─ gọi HiringProvider (providers/base.py)
-             ├─ MockProvider  → đọc mock_data/   (hiện tại)
-             └─ adapter ATS thật                  (team integration, sau này)
+   └─ filter_tools.py (read-only allowlist)
+        └─ HiringProvider
+             ├─ MockProvider  → đọc mock_data/
+             └─ adapter HR thật → chờ team integration
 ```
 
-Agent và tool chỉ biết `HiringProvider`, không biết provider cụ thể. Đổi provider = thêm một adapter, không sửa agent.
+### Schedule standalone
+
+```
+shortlist.json (fixture từ Filter)
+   └─ Schedule Agent (LLM, vòng ReAct)
+        ├─ schedule_tools.py: đọc job, candidate, mentor, availability
+        ├─ MockProvider: đọc jobs/candidates/mentors/slots.json
+        └─ ScheduleProposal
+             └─ code guardrail
+                  └─ ScheduleResult: success / needs_human / failed
+```
+
+Schedule hiện mới **đề xuất slot**. Proposal phase đã có 46 test pass và chạy được với model thật. Chưa tạo calendar event, chưa gửi email, chưa báo Slack.
+
+Agent và tool chỉ biết `HiringProvider`, không biết provider cụ thể. Đổi provider = thêm adapter, không sửa agent.
 
 ## Chạy thử
 
@@ -73,22 +97,25 @@ cp .env.example .env                   # rồi mở .env, điền OPENAI_API_KEY
 
 python -m pytest -q                    # test offline; test gọi OpenAI thật tự bỏ qua nếu không có key
 python -m app.agents.filter_agent      # chạy Filter Agent thật trên mock data (cần key, tốn token)
+python -m app.agents.schedule_agent    # chạy Schedule Agent thật: đề xuất slot (cần key, tốn token)
 ```
 
 ## Cho team integration
 
-Để nối provider thật, viết một class có đủ các hàm của `HiringProvider` trong [backend/app/providers/base.py](backend/app/providers/base.py):
+Để nối provider HR thật, viết một class có đủ các hàm của `HiringProvider` trong [backend/app/providers/base.py](backend/app/providers/base.py):
 
-- `get_job(job_id) -> Job`
+- `get_job(job_id) -> Job` — phải có `interview_duration_minutes`, `mentor_ids`
 - `list_candidates(job_id) -> list[Candidate]`
 - `get_candidate(candidate_id) -> Candidate`
+- `list_interviewers(job_id) -> list[Mentor]`
+- `get_availability(mentor_id) -> list[Slot]`
 
-Quy ước:
-- Chuyển dữ liệu của provider về model trong `contracts/domain.py`; chi tiết riêng của provider chỉ nằm trong adapter.
-- Lỗi phải ném đúng loại: `ProviderUnavailable` (không kết nối được), `NotFound` (không có bản ghi).
-- URL, credential qua biến môi trường.
+Adapter phải map dữ liệu HR system về model nội bộ trong `contracts/domain.py`; chi tiết API riêng chỉ nằm trong adapter. Lỗi phải ném đúng loại: `ProviderUnavailable` hoặc `NotFound`. URL và credential lấy từ biến môi trường.
 
-Các hàm cho Schedule và Interview sẽ được thêm vào interface khi hai agent đó được làm.
+Sau khi provider đọc chạy ổn, mới thêm các method ghi cho bước thực thi:
+`create_interview`, `notify_candidate`, `notify_recruiter`.
+
+Schedule Agent không biết provider cụ thể. Đổi `MockProvider` sang adapter HR thật = thay object truyền vào `run_schedule_agent()`, không sửa prompt/guardrail.
 
 ## Cho team harness
 

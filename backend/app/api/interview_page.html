@@ -1,0 +1,171 @@
+<!doctype html>
+<!-- Interview Agent demo page: plays the interview audio, shows live speaker-labelled transcript
+     (AssemblyAI streaming), AI follow-up suggestions after each candidate answer, rubric feedback at the end.
+     ?mode=script replays the ground-truth JSON instead of AssemblyAI (no key needed / network fallback). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview Agent</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2433; --muted:#6b7385; --line:#e3e6ec; --accent:#2f6fed; --ok:#1f9d55; --warn:#c77700; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:17px; margin:0; flex:1; }
+  .badge { font-size:12px; padding:2px 8px; border-radius:10px; background:var(--line); color:var(--muted); }
+  .badge.live { background:#fde8e8; color:#c62828; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.danger { background:#c62828; color:#fff; border-color:#c62828; }
+  button:disabled { opacity:.5; cursor:default; }
+  main { display:grid; grid-template-columns:1fr 380px; gap:16px; padding:16px 20px; height:calc(100vh - 62px); }
+  @media (max-width:800px) { main { grid-template-columns:1fr; height:auto; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; overflow:auto; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 10px; }
+  .turn { margin-bottom:14px; }
+  .who { font-weight:600; font-size:13px; }
+  .who.techlead { color:var(--accent); } .who.candidate { color:#8e44ad; }
+  .turn.partial p { color:var(--muted); font-style:italic; }
+  .turn p { margin:2px 0 0; }
+  aside { display:flex; flex-direction:column; gap:16px; overflow:auto; }
+  aside .card { overflow:visible; flex-shrink:0; } /* the whole side column scrolls, not each card */
+  audio { width:100%; }
+  ul { margin:0; padding-left:18px; }
+  li { margin-bottom:6px; }
+  .score { border-top:1px solid var(--line); padding:8px 0; }
+  .score b { float:right; }
+  .score q { display:block; color:var(--muted); font-size:13px; margin-top:4px; }
+  .flag { color:var(--warn); font-size:12px; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Backend Engineer (Python) — Technical interview</h1>
+  <span id="status" class="badge">Ready</span>
+  <select id="fixture" aria-label="Interview recording">
+    <option value="j1_strong">Strong candidate</option>
+    <option value="j1_weak">Weak candidate</option>
+  </select>
+  <button id="start" class="primary">Start interview</button>
+  <button id="end" class="danger" disabled>End interview</button>
+</header>
+<main>
+  <section class="card" aria-live="polite"><h2>Transcript</h2><div id="transcript"><p class="muted">Press Start to play the recording.</p></div></section>
+  <aside>
+    <div class="card"><h2>Recording</h2><audio id="audio" controls></audio></div>
+    <div class="card"><h2>Suggested follow-up questions</h2><ul id="followups"><li class="muted">Appears after the candidate answers.</li></ul></div>
+    <div class="card"><h2>Feedback (rubric)</h2><div id="feedback"><p class="muted">Appears after End interview.</p></div></div>
+  </aside>
+</main>
+<script>
+const SCRIPT_MODE = new URLSearchParams(location.search).get("mode") === "script";
+const turns = new Map();          // turn_order -> {speaker, text, final}
+const askedFollowUps = new Set(); // turn_orders already sent to the agent
+let ws = null, audioContext = null, scriptTimer = null;
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+// ASSUMPTION: the first speaker AssemblyAI hears (label "A") is the techlead
+const roleOf = (label) => (label === "A" || label === "techlead" ? "techlead" : "candidate");
+
+function render() {
+  const sorted = [...turns.entries()].sort((a, b) => a[0] - b[0]);
+  $("transcript").innerHTML = sorted.map(([, t]) =>
+    `<div class="turn ${t.final ? "" : "partial"}"><div class="who ${t.speaker}">${t.speaker === "techlead" ? "Techlead" : "Candidate"}</div><p>${escapeHtml(t.text)}</p></div>`).join("");
+  $("transcript").parentElement.scrollTop = 1e9;
+}
+
+function finalTranscript() {
+  return [...turns.entries()].sort((a, b) => a[0] - b[0]).filter(([, t]) => t.final && t.text).map(([, t]) => ({ speaker: t.speaker, text: t.text }));
+}
+
+async function onTurnFinished(order) {
+  render();
+  if (turns.get(order).speaker !== "candidate" || askedFollowUps.has(order)) return;
+  askedFollowUps.add(order);
+  const res = await fetch("/interview/follow-ups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: finalTranscript() }) });
+  const { questions } = await res.json();
+  $("followups").innerHTML = questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("");
+}
+
+async function startLive() {
+  const { token } = await (await fetch("/interview/token")).json();
+  // 16 kHz context: the browser resamples the recording to what AssemblyAI expects
+  audioContext = new AudioContext({ sampleRate: 16000 });
+  const source = audioContext.createMediaElementSource($("audio"));
+  const processor = audioContext.createScriptProcessor(4096, 1, 1); // ~256 ms chunks, within the 50-1000 ms limit
+  source.connect(audioContext.destination); // keep it audible
+  source.connect(processor); processor.connect(audioContext.destination);
+  const params = new URLSearchParams({ sample_rate: 16000, encoding: "pcm_s16le", speaker_labels: "true", max_speakers: 2, token });
+  ws = new WebSocket(`wss://streaming.assemblyai.com/v3/ws?${params}`);
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === "Turn") {
+      turns.set(msg.turn_order, { speaker: roleOf(msg.speaker_label), text: msg.transcript, final: msg.end_of_turn });
+      msg.end_of_turn ? onTurnFinished(msg.turn_order) : render();
+    } else if (msg.type === "SpeakerRevision") {
+      // AssemblyAI may re-assign speakers after hearing more; latest wins
+      for (const r of msg.revisions) if (turns.has(r.turn_order)) turns.get(r.turn_order).speaker = roleOf(r.speaker_label);
+      render();
+    }
+  };
+  ws.onclose = (event) => { if (event.code !== 1000) $("status").textContent = `Disconnected (${event.code}) ${event.reason}`; };
+  processor.onaudioprocess = (event) => {
+    if (ws.readyState !== WebSocket.OPEN || $("audio").paused) return;
+    const samples = event.inputBuffer.getChannelData(0);
+    const pcm = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i++) pcm[i] = Math.max(-1, Math.min(1, samples[i])) * 0x7fff;
+    ws.send(pcm.buffer);
+  };
+  await new Promise((resolve) => (ws.onopen = resolve));
+}
+
+async function startScriptReplay(fixture) {
+  const script = await (await fetch(`/interview/audio/${fixture}.json`)).json();
+  let shown = 0;
+  scriptTimer = setInterval(() => {
+    while (shown < script.length && script[shown].start_sec <= $("audio").currentTime) {
+      turns.set(shown, { speaker: script[shown].speaker, text: script[shown].text, final: true });
+      onTurnFinished(shown++);
+    }
+  }, 300);
+}
+
+$("start").onclick = async () => {
+  $("start").disabled = $("fixture").disabled = true;
+  const fixture = $("fixture").value;
+  $("audio").src = `/interview/audio/${fixture}.wav`;
+  turns.clear(); askedFollowUps.clear(); render();
+  $("status").textContent = "Connecting…";
+  try {
+    SCRIPT_MODE ? await startScriptReplay(fixture) : await startLive();
+  } catch (error) {
+    $("status").textContent = "Error: " + error.message; $("start").disabled = false; return;
+  }
+  await $("audio").play();
+  $("status").textContent = SCRIPT_MODE ? "Replay" : "● Live"; $("status").classList.add("live");
+  $("end").disabled = false;
+};
+
+$("end").onclick = async () => {
+  $("end").disabled = true; $("audio").pause(); clearInterval(scriptTimer);
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "Terminate" }));
+  if (audioContext) audioContext.close();
+  $("status").textContent = "Scoring…"; $("status").classList.remove("live");
+  const res = await fetch("/interview/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: finalTranscript() }) });
+  const result = await res.json();
+  $("status").textContent = result.status === "success" ? "Done" : result.status === "needs_human" ? "Done — needs human review" : "Failed";
+  if (!result.feedback) { $("feedback").innerHTML = `<p class="flag">${escapeHtml(result.error || "No feedback")}</p>`; return; }
+  const f = result.feedback;
+  $("feedback").innerHTML = `<p>${escapeHtml(f.summary)}</p>` + f.scores.map((s) =>
+    `<div class="score">${escapeHtml(s.criterion)} <b>${s.score}</b>
+     ${result.unverified_criteria.includes(s.criterion) ? '<div class="flag">⚠ evidence not found in transcript — check manually</div>' : ""}
+     ${s.evidence_quote ? `<q>${escapeHtml(s.evidence_quote)}</q>` : ""}<div class="muted">${escapeHtml(s.reason)}</div></div>`).join("") +
+    `<h2 style="margin-top:12px">Strengths</h2><ul>${f.strengths.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` +
+    `<h2 style="margin-top:12px">Concerns</h2><ul>${f.concerns.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+};
+</script>
+</body>
+</html>

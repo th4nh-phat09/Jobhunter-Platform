@@ -20,3 +20,13 @@ Một tin tuyển dụng: Backend Engineer (Python). Yêu cầu: python, fastapi
 | c6 | Vo Thi Phuong | Mập mờ: 8 năm nhưng 3 năm gần nhất làm quản lý, ít code |
 
 Dữ liệu là bản nháp (ASSUMPTION), sẽ đổi theo product spec.
+
+## interview/
+Buổi phỏng vấn giả lập cho Interview Agent (job `j1`), tạo bằng `python -m scripts.generate_mock_interview strong|weak`
+(LLM viết kịch bản, OpenAI TTS đọc: techlead giọng nam, candidate giọng nữ).
+
+| File | Mô phỏng |
+|---|---|
+| `j1_strong.wav` / `.json` | Candidate junior trả lời tốt. JSON = kịch bản gốc (đáp án để so transcript) |
+| `j1_weak.wav` / `.json` | Candidate trả lời mơ hồ, nhầm PUT/POST và INNER/LEFT JOIN |
+| `rubric_j1.json` | Barem nháp 5 tiêu chí, có mốc điểm (ASSUMPTION, thay bằng barem của team) |
