@@ -136,8 +136,13 @@ async function startScriptReplay(fixture) {
 $("start").onclick = async () => {
   $("start").disabled = $("fixture").disabled = true;
   const fixture = $("fixture").value;
-  $("audio").src = `/interview/audio/${fixture}.wav`;
+  // Fresh <audio> each run: the browser allows only one createMediaElementSource per element
+  const freshAudio = $("audio").cloneNode();
+  $("audio").replaceWith(freshAudio);
+  freshAudio.src = `/interview/audio/${fixture}.wav`;
   turns.clear(); askedFollowUps.clear(); render();
+  $("followups").innerHTML = '<li class="muted">Appears after the candidate answers.</li>';
+  $("feedback").innerHTML = '<p class="muted">Appears after End interview.</p>';
   $("status").textContent = "Connecting…";
   try {
     SCRIPT_MODE ? await startScriptReplay(fixture) : await startLive();
@@ -157,6 +162,7 @@ $("end").onclick = async () => {
   const res = await fetch("/interview/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: finalTranscript() }) });
   const result = await res.json();
   $("status").textContent = result.status === "success" ? "Done" : result.status === "needs_human" ? "Done — needs human review" : "Failed";
+  $("start").disabled = $("fixture").disabled = false; // allow running the other recording
   if (!result.feedback) { $("feedback").innerHTML = `<p class="flag">${escapeHtml(result.error || "No feedback")}</p>`; return; }
   const f = result.feedback;
   $("feedback").innerHTML = `<p>${escapeHtml(f.summary)}</p>` + f.scores.map((s) =>
